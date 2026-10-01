@@ -19,8 +19,6 @@ model_name = st.selectbox(
     ("realesrgan-x4plus", "realesrgan-x4plus-anime")
 )
 
-use_cpu = st.checkbox("Sử dụng CPU thay vì GPU (Tích chọn nếu bạn bị lỗi vRAM / vkAllocateMemory)")
-
 uploaded_file = st.file_uploader("Chọn một hình ảnh...", type=["jpg", "jpeg", "png", "webp"])
 
 if uploaded_file is not None:
@@ -54,11 +52,9 @@ if uploaded_file is not None:
                     "-i", input_path,
                     "-o", output_path,
                     "-n", model_name,
-                    "-t", "64" # Hạ xuống mức thấp nhất để tương thích với GPU cực yếu
+                    "-t", "32", # Mức tile size thấp nhất
+                    "-j", "1:1:1" # Ép chạy 1 luồng xử lý duy nhất để không nhân đôi bộ nhớ VRAM
                 ]
-                
-                if use_cpu:
-                    command.extend(["-g", "-1"])
                 
                 try:
                     # Truyền cwd = thư mục chứa exe để ncnn tải được file trọng số
