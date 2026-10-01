@@ -52,7 +52,7 @@ if uploaded_file is not None:
                     "-i", input_path,
                     "-o", output_path,
                     "-n", model_name,
-                    "-t", "256" # Tối ưu VRAM cho card tích hợp / ảnh lớn
+                    "-t", "64" # Hạ xuống mức thấp nhất để tương thích với GPU cực yếu
                 ]
                 
                 try:
