@@ -102,10 +102,15 @@ if uploaded_file is not None:
                     input_path = os.path.join(tmpdirname, "input.png")
                     output_path = os.path.join(tmpdirname, "output.png")
                     
-                    # Tiền xử lý ảnh gốc (Pre-sharpening) để AI nhận diện nét rõ hơn
+                    # Tiền xử lý ảnh gốc (Pre-sharpening & JPEG Denoising)
                     image_to_process = image
                     if "Ultimate" in model_name:
                         img_cv_pre = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                        
+                        # Đề xuất 1: Khử nhiễu JPEG nhẹ trên ảnh gốc bằng thuật toán nội suy phi tuyến (rất nhanh)
+                        # Giúp AI không phóng đại các hạt pixel vỡ
+                        img_cv_pre = cv2.fastNlMeansDenoisingColored(img_cv_pre, None, 3, 3, 7, 15)
+                        
                         gaussian_pre = cv2.GaussianBlur(img_cv_pre, (0, 0), 1.5)
                         img_cv_pre = cv2.addWeighted(img_cv_pre, 1.8, gaussian_pre, -0.8, 0)
                         image_to_process = Image.fromarray(cv2.cvtColor(img_cv_pre, cv2.COLOR_BGR2RGB))
@@ -139,10 +144,14 @@ if uploaded_file is not None:
                         
                         if os.path.exists(output_path):
                             if "Ultimate" in model_name:
-                                # 4 LỚP NÂNG CẤP KÉP
+                                # 4 LỚP NÂNG CẤP KÉP + CÁC ĐỀ XUẤT MỚI
                                 ai_img = cv2.imread(output_path)
                                 orig_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                                 h_ai, w_ai = ai_img.shape[:2]
+                                
+                                # Đề xuất 5: Cắt viền thừa (crop 2 pixel mỗi cạnh) do AI padding
+                                ai_img = ai_img[2:h_ai-2, 2:w_ai-2]
+                                h_ai, w_ai = ai_img.shape[:2] # Cập nhật lại kích thước sau crop
                                 
                                 # 1. Smart Masking (Giữ nét chữ gốc, lấy nền AI)
                                 orig_up = cv2.resize(orig_img, (w_ai, h_ai), interpolation=cv2.INTER_CUBIC)
@@ -156,6 +165,9 @@ if uploaded_file is not None:
                                 mask_float = cv2.cvtColor(mask_float, cv2.COLOR_GRAY2BGR)
                                 
                                 blended = (ai_img * (1 - mask_float) + orig_up_sharp * mask_float).astype(np.uint8)
+                                
+                                # Đề xuất 2: Blend 15% ảnh gốc để phục hồi vân bề mặt (Texture lá, đá) chống "Nhựa hóa"
+                                blended = cv2.addWeighted(blended, 0.85, orig_up, 0.15, 0)
                                 
                                 # 2. Denoising (Làm mịn mảng màu mảng khối)
                                 blended = cv2.bilateralFilter(blended, 5, 25, 25)
