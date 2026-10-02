@@ -22,8 +22,10 @@ model_name = st.selectbox(
     "Chọn mô hình AI:",
     (
         "EDSR-x4 (Cơ bản - Ảnh thực tế, chống lỗi VRAM)",
-        "EDSR-x4-Sharp (Đề xuất - Ảnh nét cao, giữ nguyên chữ, chống lỗi VRAM 100%)",
-        "realesrgan-x4plus-anime (Ảnh hoạt hình - Chạy GPU)"
+        "EDSR-x4-Sharp (Khuyên dùng - Nét vừa, giữ nguyên chữ)",
+        "EDSR-x4-SuperSharp (Nét căng - Tăng cường sắc nét tối đa)",
+        "realesrgan-x4plus-anime (Ảnh hoạt hình - Sắc nét nhưng vỡ chữ)",
+        "realesr-animevideov3 (Anime Video - Nhanh, đỡ vỡ chữ hơn)"
     )
 )
 
@@ -59,7 +61,11 @@ if uploaded_file is not None:
                     result_cv = sr.upsample(img_cv)
                     
                     # Áp dụng công nghệ Bù nét (Unsharp Mask) nếu người dùng chọn bản Sharp
-                    if "Sharp" in model_name:
+                    if "SuperSharp" in model_name:
+                        # Tăng cường nét tối đa
+                        gaussian = cv2.GaussianBlur(result_cv, (0, 0), 3.0)
+                        result_cv = cv2.addWeighted(result_cv, 2.0, gaussian, -1.0, 0)
+                    elif "Sharp" in model_name:
                         # Làm mờ ảnh để tạo mặt nạ
                         gaussian = cv2.GaussianBlur(result_cv, (0, 0), 2.0)
                         # Cộng dồn chi tiết sắc nét vào ảnh gốc
@@ -100,11 +106,16 @@ if uploaded_file is not None:
                     exe_path = os.path.abspath(os.path.join("bin", "realesrgan-ncnn-vulkan.exe"))
                     exe_dir = os.path.dirname(exe_path)
                     
+                    if "animevideov3" in model_name:
+                        real_model_name = "realesr-animevideov3"
+                    else:
+                        real_model_name = "realesrgan-x4plus-anime"
+
                     command = [
                         exe_path,
                         "-i", input_path,
                         "-o", output_path,
-                        "-n", "realesrgan-x4plus-anime",
+                        "-n", real_model_name,
                         "-t", "128" # Trả lại tiling 128 cho anime
                     ]
                     
