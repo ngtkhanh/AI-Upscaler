@@ -22,7 +22,7 @@ model_name = st.selectbox(
     "Chọn mô hình AI:",
     (
         "EDSR-x4 (Khuyên dùng - Ảnh thực tế, chống lỗi VRAM, chạy siêu chuẩn)",
-        "realesrgan-x4plus (Ảnh thực tế - Sắc nét cao, giữ nguyên chữ - Chạy GPU)",
+        "realesrgan-x4plus (Ảnh thực tế - Sắc nét cao, giữ chữ - Chạy CPU chống lỗi)",
         "realesrgan-x4plus-anime (Ảnh hoạt hình - Chạy GPU)"
     )
 )
@@ -96,15 +96,19 @@ if uploaded_file is not None:
                     # Xác định tên mô hình cho Real-ESRGAN
                     if "anime" in model_name:
                         real_model_name = "realesrgan-x4plus-anime"
+                        gpu_mode = "0"  # Dùng GPU
                     else:
                         real_model_name = "realesrgan-x4plus"
+                        gpu_mode = "-1" # Ép dùng CPU để không bị tràn VRAM
 
                     command = [
                         exe_path,
                         "-i", input_path,
                         "-o", output_path,
                         "-n", real_model_name,
-                        "-t", "128"  # Chia nhỏ ảnh thành các khối 128x128 để xử lý, chống tràn VRAM
+                        "-g", gpu_mode, # Chọn CPU hoặc GPU
+                        "-t", "64",     # Cắt nhỏ ảnh tối đa để tránh lỗi cấp phát VRAM
+                        "-j", "1:1:1"   # Chỉ chạy 1 luồng xử lý
                     ]
                     
                     try:
