@@ -21,8 +21,8 @@ ensure_edsr_exists()
 model_name = st.selectbox(
     "Chọn mô hình AI:",
     (
-        "EDSR-x4 (Khuyên dùng - Ảnh thực tế, chống lỗi VRAM, chạy siêu chuẩn)",
-        "realesrgan-x4plus (Ảnh thực tế - Sắc nét cao, giữ chữ - Chạy CPU chống lỗi)",
+        "EDSR-x4 (Cơ bản - Ảnh thực tế, chống lỗi VRAM)",
+        "EDSR-x4-Sharp (Đề xuất - Ảnh nét cao, giữ nguyên chữ, chống lỗi VRAM 100%)",
         "realesrgan-x4plus-anime (Ảnh hoạt hình - Chạy GPU)"
     )
 )
@@ -57,6 +57,13 @@ if uploaded_file is not None:
                     
                     # Thực hiện Upscale trực tiếp bằng CPU (RAM) -> Chống tràn VRAM 100%
                     result_cv = sr.upsample(img_cv)
+                    
+                    # Áp dụng công nghệ Bù nét (Unsharp Mask) nếu người dùng chọn bản Sharp
+                    if "Sharp" in model_name:
+                        # Làm mờ ảnh để tạo mặt nạ
+                        gaussian = cv2.GaussianBlur(result_cv, (0, 0), 2.0)
+                        # Cộng dồn chi tiết sắc nét vào ảnh gốc
+                        result_cv = cv2.addWeighted(result_cv, 1.5, gaussian, -0.5, 0)
                     
                     # Chuyển lại sang PIL format
                     out_image = Image.fromarray(cv2.cvtColor(result_cv, cv2.COLOR_BGR2RGB))
@@ -93,22 +100,12 @@ if uploaded_file is not None:
                     exe_path = os.path.abspath(os.path.join("bin", "realesrgan-ncnn-vulkan.exe"))
                     exe_dir = os.path.dirname(exe_path)
                     
-                    # Xác định tên mô hình cho Real-ESRGAN
-                    if "anime" in model_name:
-                        real_model_name = "realesrgan-x4plus-anime"
-                        gpu_mode = "0"  # Dùng GPU
-                    else:
-                        real_model_name = "realesrgan-x4plus"
-                        gpu_mode = "-1" # Ép dùng CPU để không bị tràn VRAM
-
                     command = [
                         exe_path,
                         "-i", input_path,
                         "-o", output_path,
-                        "-n", real_model_name,
-                        "-g", gpu_mode, # Chọn CPU hoặc GPU
-                        "-t", "64",     # Cắt nhỏ ảnh tối đa để tránh lỗi cấp phát VRAM
-                        "-j", "1:1:1"   # Chỉ chạy 1 luồng xử lý
+                        "-n", "realesrgan-x4plus-anime",
+                        "-t", "128" # Trả lại tiling 128 cho anime
                     ]
                     
                     try:
