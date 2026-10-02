@@ -22,6 +22,7 @@ model_name = st.selectbox(
     "Chọn mô hình AI:",
     (
         "EDSR-x4 (Khuyên dùng - Ảnh thực tế, chống lỗi VRAM, chạy siêu chuẩn)",
+        "realesrgan-x4plus (Ảnh thực tế - Sắc nét cao, giữ nguyên chữ - Chạy GPU)",
         "realesrgan-x4plus-anime (Ảnh hoạt hình - Chạy GPU)"
     )
 )
@@ -92,11 +93,17 @@ if uploaded_file is not None:
                     exe_path = os.path.abspath(os.path.join("bin", "realesrgan-ncnn-vulkan.exe"))
                     exe_dir = os.path.dirname(exe_path)
                     
+                    # Xác định tên mô hình cho Real-ESRGAN
+                    if "anime" in model_name:
+                        real_model_name = "realesrgan-x4plus-anime"
+                    else:
+                        real_model_name = "realesrgan-x4plus"
+
                     command = [
                         exe_path,
                         "-i", input_path,
                         "-o", output_path,
-                        "-n", "realesrgan-x4plus-anime"
+                        "-n", real_model_name
                     ]
                     
                     try:
