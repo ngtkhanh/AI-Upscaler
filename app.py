@@ -103,7 +103,8 @@ if uploaded_file is not None:
                         exe_path,
                         "-i", input_path,
                         "-o", output_path,
-                        "-n", real_model_name
+                        "-n", real_model_name,
+                        "-t", "128"  # Chia nhỏ ảnh thành các khối 128x128 để xử lý, chống tràn VRAM
                     ]
                     
                     try:
