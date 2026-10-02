@@ -26,7 +26,7 @@ model_name = st.selectbox(
         "EDSR-x4-SuperSharp (Nét căng - Tăng cường sắc nét tối đa)",
         "realesrgan-x4plus-anime (Ảnh hoạt hình - Sắc nét nhưng vỡ chữ)",
         "realesr-animevideov3 (Anime Video - Nhanh, đỡ vỡ chữ hơn)",
-        "realesr-animevideov3-Pro (Anime cao cấp - Tiền xử lý chống lẹm chữ)"
+        "realesr-animevideov3-Ultimate (Anime Tối Thượng - 4 Lớp Nâng Cấp Kép)"
     )
 )
 
@@ -102,12 +102,11 @@ if uploaded_file is not None:
                     input_path = os.path.join(tmpdirname, "input.png")
                     output_path = os.path.join(tmpdirname, "output.png")
                     
-                    # Tiền xử lý ảnh gốc (Pre-sharpening) nếu là bản Pro
+                    # Tiền xử lý ảnh gốc (Pre-sharpening) để AI nhận diện nét rõ hơn
                     image_to_process = image
-                    if "Pro" in model_name:
+                    if "Ultimate" in model_name:
                         img_cv_pre = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
                         gaussian_pre = cv2.GaussianBlur(img_cv_pre, (0, 0), 1.5)
-                        # Đẩy nhẹ tương phản viền để AI dễ dàng nhận ra nét chữ
                         img_cv_pre = cv2.addWeighted(img_cv_pre, 1.8, gaussian_pre, -0.8, 0)
                         image_to_process = Image.fromarray(cv2.cvtColor(img_cv_pre, cv2.COLOR_BGR2RGB))
                     
@@ -139,7 +138,40 @@ if uploaded_file is not None:
                         )
                         
                         if os.path.exists(output_path):
-                            out_image = Image.open(output_path)
+                            if "Ultimate" in model_name:
+                                # 4 LỚP NÂNG CẤP KÉP
+                                ai_img = cv2.imread(output_path)
+                                orig_img = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                                h_ai, w_ai = ai_img.shape[:2]
+                                
+                                # 1. Smart Masking (Giữ nét chữ gốc, lấy nền AI)
+                                orig_up = cv2.resize(orig_img, (w_ai, h_ai), interpolation=cv2.INTER_CUBIC)
+                                orig_up_sharp = cv2.addWeighted(orig_up, 2.0, cv2.GaussianBlur(orig_up, (0,0), 3.0), -1.0, 0)
+                                
+                                gray_orig = cv2.cvtColor(orig_img, cv2.COLOR_BGR2GRAY)
+                                edges = cv2.Canny(gray_orig, 100, 200)
+                                mask = cv2.resize(edges, (w_ai, h_ai), interpolation=cv2.INTER_NEAREST)
+                                mask = cv2.GaussianBlur(mask, (5, 5), 0)
+                                mask_float = mask.astype(np.float32) / 255.0
+                                mask_float = cv2.cvtColor(mask_float, cv2.COLOR_GRAY2BGR)
+                                
+                                blended = (ai_img * (1 - mask_float) + orig_up_sharp * mask_float).astype(np.uint8)
+                                
+                                # 2. Denoising (Làm mịn mảng màu mảng khối)
+                                blended = cv2.bilateralFilter(blended, 5, 25, 25)
+                                
+                                # 3. Color Correction (Đẩy rực màu 15%)
+                                hsv = cv2.cvtColor(blended, cv2.COLOR_BGR2HSV).astype(np.float32)
+                                hsv[:,:,1] = np.clip(hsv[:,:,1] * 1.15, 0, 255)
+                                blended = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+                                
+                                # 4. Siêu nén điểm ảnh (Downscale mượt về x3)
+                                new_w, new_h = int(w_ai * 0.75), int(h_ai * 0.75)
+                                final_img = cv2.resize(blended, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+                                
+                                out_image = Image.fromarray(cv2.cvtColor(final_img, cv2.COLOR_BGR2RGB))
+                            else:
+                                out_image = Image.open(output_path)
                             
                             with col2:
                                 st.subheader("Ảnh Sau Khi Upscale (4x)")
