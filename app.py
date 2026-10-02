@@ -25,7 +25,8 @@ model_name = st.selectbox(
         "EDSR-x4-Sharp (Khuyên dùng - Nét vừa, giữ nguyên chữ)",
         "EDSR-x4-SuperSharp (Nét căng - Tăng cường sắc nét tối đa)",
         "realesrgan-x4plus-anime (Ảnh hoạt hình - Sắc nét nhưng vỡ chữ)",
-        "realesr-animevideov3 (Anime Video - Nhanh, đỡ vỡ chữ hơn)"
+        "realesr-animevideov3 (Anime Video - Nhanh, đỡ vỡ chữ hơn)",
+        "realesr-animevideov3-Pro (Anime cao cấp - Tiền xử lý chống lẹm chữ)"
     )
 )
 
@@ -101,7 +102,16 @@ if uploaded_file is not None:
                     input_path = os.path.join(tmpdirname, "input.png")
                     output_path = os.path.join(tmpdirname, "output.png")
                     
-                    image.save(input_path)
+                    # Tiền xử lý ảnh gốc (Pre-sharpening) nếu là bản Pro
+                    image_to_process = image
+                    if "Pro" in model_name:
+                        img_cv_pre = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                        gaussian_pre = cv2.GaussianBlur(img_cv_pre, (0, 0), 1.5)
+                        # Đẩy nhẹ tương phản viền để AI dễ dàng nhận ra nét chữ
+                        img_cv_pre = cv2.addWeighted(img_cv_pre, 1.8, gaussian_pre, -0.8, 0)
+                        image_to_process = Image.fromarray(cv2.cvtColor(img_cv_pre, cv2.COLOR_BGR2RGB))
+                    
+                    image_to_process.save(input_path)
                     
                     exe_path = os.path.abspath(os.path.join("bin", "realesrgan-ncnn-vulkan.exe"))
                     exe_dir = os.path.dirname(exe_path)

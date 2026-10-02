@@ -51,3 +51,6 @@ Cung cấp lựa chọn RÕ RÀNG cho user trong UI: một tùy chọn an toàn/
 
 ### Hybrid Upscaling Pattern (EDSR + Unsharp Mask)
 Thay vì cố gắng nạp các GAN model nặng nề dễ văng lỗi để có được độ sắc nét, có thể dùng các mô hình an toàn (EDSR chạy bằng CPU) kết hợp với thuật toán bù nét cổ điển (Unsharp Mask qua `cv2`). Điều này cân bằng hoàn hảo giữa: độ tin cậy phần cứng tuyệt đối (không crash VRAM), tính nguyên bản của ảnh (không bị méo chữ) và cảm quan độ nét (sharpness) tốt.
+
+### Pre-sharpening Pattern cho GAN Models
+Các mô hình AI đóng gói sẵn (như `realesr-animevideov3`) thường bị ảo giác (hallucination) làm lẹm chữ do coi chữ là nhiễu ảnh. Bằng cách áp dụng **Tiền xử lý làm sắc nét (Pre-sharpening)** trên ảnh gốc bằng thuật toán Unsharp Mask trước khi nạp vào AI, AI sẽ nhận diện các đường viền chữ rõ ràng hơn và giảm thiểu tỷ lệ bóp méo hình thù so với ảnh chưa được làm nét ban đầu.
