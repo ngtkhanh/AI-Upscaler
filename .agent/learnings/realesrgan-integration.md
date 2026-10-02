@@ -54,3 +54,9 @@ Thay vì cố gắng nạp các GAN model nặng nề dễ văng lỗi để có
 
 ### Pre-sharpening Pattern cho GAN Models
 Các mô hình AI đóng gói sẵn (như `realesr-animevideov3`) thường bị ảo giác (hallucination) làm lẹm chữ do coi chữ là nhiễu ảnh. Bằng cách áp dụng **Tiền xử lý làm sắc nét (Pre-sharpening)** trên ảnh gốc bằng thuật toán Unsharp Mask trước khi nạp vào AI, AI sẽ nhận diện các đường viền chữ rõ ràng hơn và giảm thiểu tỷ lệ bóp méo hình thù so với ảnh chưa được làm nét ban đầu.
+
+### Advanced Computer Vision Pipeline cho GAN
+Để khắc phục hoàn toàn nhược điểm "nhựa hóa" và phóng đại lỗi của GAN, một Pipeline tiêu chuẩn cần bổ sung:
+1. **Pre-upscale Denoising:** Dùng `cv2.fastNlMeansDenoisingColored` trên ảnh gốc đầu vào để gỡ bỏ nhiễu khối (JPEG blocking). GAN cực kỳ nhạy cảm và sẽ làm nét các nhiễu này nếu không xóa trước.
+2. **Texture Blending:** Trộn lại 10-15% ảnh gốc (được upscale cơ bản bằng Bicubic) lên thành phẩm của GAN. Điều này phá vỡ cảm giác sáp mịn giả tạo, phục hồi vân tự nhiên cho lá, đá và môi trường.
+3. **Padding Crop:** Cắt bỏ 2-4 pixel ở mỗi cạnh viền ảnh của kết quả đầu ra để loại bỏ dải trắng sinh ra bởi thuật toán Replicate Padding bên trong mô hình NCNN.
