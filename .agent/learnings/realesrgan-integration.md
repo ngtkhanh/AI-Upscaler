@@ -12,8 +12,12 @@ Thay vì phụ thuộc hoàn toàn vào `realesrgan-ncnn-vulkan` (chỉ chạy G
 ## Bugs & Solutions
 
 ### vkAllocateMemory failed -2 trên iGPU
-*   **Root Cause:** Các iGPU như AMD Radeon 780M bị giới hạn cứng về cấp phát bộ nhớ (allocation limit) bởi driver Vulkan, không thể nạp các model lớn như `realesrgan-x4plus` (33MB).
-*   **Solution:** Giảm Tile Size xuống tối thiểu (`-t 32`) và ép chạy đơn luồng (`-j 1:1:1`). Tuy nhiên, nếu model vẫn quá lớn so với giới hạn buffer, giải pháp dứt điểm là fallback sang CPU model (ví dụ EDSR).
+*   **Root Cause:** Các iGPU như AMD Radeon 780M bị giới hạn cứng về cấp phát bộ nhớ (allocation limit) bởi driver Vulkan, không thể nạp các model lớn như `realesrgan-x4plus` (33MB) ngay cả khi cắt nhỏ ảnh.
+*   **Solution:** Giảm Tile Size (`-t 64`) và ép chạy đơn luồng (`-j 1:1:1`). Tuy nhiên, đối với `realesrgan-x4plus` trên card tích hợp, thao tác này vẫn thất bại. Giải pháp dứt điểm là loại bỏ model này khỏi UI hoặc fallback sang CPU model (ví dụ EDSR).
+
+### Lỗi biến dạng chữ (Text Distortion) khi dùng model Anime
+*   **Root Cause:** Model `realesrgan-x4plus-anime` cố gắng làm phẳng và mượt các đường nét. Khi gặp chữ hoặc chi tiết nhỏ của ảnh thực tế, nó tự động nội suy sai và bóp méo chữ thành các hình thù lạ.
+*   **Solution:** Dùng EDSR thay thế để bảo toàn hình dáng gốc của chữ, sau đó áp dụng **Unsharp Mask (bù nét)** ở bước hậu xử lý (dùng `cv2.addWeighted`) để tăng cường độ sắc nét tương đương RealESRGAN.
 
 ### Lỗi invalid gpu device khi ép dùng CPU
 *   **Root Cause:** Binary `realesrgan-ncnn-vulkan` được compile cứng cho Vulkan. Tham số `-g -1` không hợp lệ.
@@ -44,3 +48,6 @@ result_img = sr.upsample(input_cv_img)
 
 ### Model Selection Pattern cho UI
 Cung cấp lựa chọn RÕ RÀNG cho user trong UI: một tùy chọn an toàn/ổn định chạy bằng RAM/CPU (như EDSR cho ảnh thực tế) và một tùy chọn GPU nhẹ (Anime). Tránh cung cấp tuỳ chọn dễ gây crash hệ thống nếu phần mềm được chạy trên các hardware phân mảnh mạnh (như Windows iGPU).
+
+### Hybrid Upscaling Pattern (EDSR + Unsharp Mask)
+Thay vì cố gắng nạp các GAN model nặng nề dễ văng lỗi để có được độ sắc nét, có thể dùng các mô hình an toàn (EDSR chạy bằng CPU) kết hợp với thuật toán bù nét cổ điển (Unsharp Mask qua `cv2`). Điều này cân bằng hoàn hảo giữa: độ tin cậy phần cứng tuyệt đối (không crash VRAM), tính nguyên bản của ảnh (không bị méo chữ) và cảm quan độ nét (sharpness) tốt.
